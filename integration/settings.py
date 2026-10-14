@@ -43,6 +43,11 @@ ONEKHUSA_ORGANISATION_ID = os.getenv("ONEKHUSA_ORGANISATION_ID")
 ONEKHUSA_MERCHANT_ACCOUNT_NUMBER = os.getenv(
     "ONEKHUSA_MERCHANT_ACCOUNT_NUMBER"
 )
+ONEKHUSA_SANDBOX_USER_EMAIL = os.getenv("ONEKHUSA_SANDBOX_USER_EMAIL")
+ONEKHUSA_WEBHOOK_SECRET = os.getenv(
+    "ONEKHUSA_WEBHOOK_SECRET",
+    "",
+)
 
 # Application definition
 
@@ -53,6 +58,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'payments',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
