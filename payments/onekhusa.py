@@ -42,7 +42,7 @@ class OneKhusaClient:
             "apiKey": self.api_key,
             "apiSecret": self.api_secret,
             "organisationId": self.organisation_id,
-            "merchantAccountNumber": self.merchant_account_number,
+            "merchantAccountNumber": int(self.merchant_account_number),
         }
 
         try:
