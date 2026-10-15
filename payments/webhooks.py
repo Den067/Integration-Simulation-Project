@@ -1,5 +1,8 @@
 
 from decimal import Decimal, InvalidOperation
+import logging
+
+logger = logging.getLogger(__name__)
 
 from django.conf import settings
 from django.db import transaction as db_transaction
@@ -45,16 +48,25 @@ class OneKhusaWebhookView(APIView):
             "payrequest.success",
             "payrequest.reversed",
         }:
+            logger.warning("OneKhusa webhook rejected: unsupported event")
             return Response(
                 {"detail": "Unsupported webhook event."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         payload = request.data
-        metadata = payload.get("metaData") or {}
-        reference = metadata.get("referenceNumber")
+
+        if isinstance(payload, dict):
+            metadata = payload.get("metaData")
+            if not isinstance(metadata, dict):
+                metadata = {}
+        else:
+            metadata = {}
+
+        reference = metadata.get("ReferenceNumber")
 
         if not reference:
+            logger.warning("OneKhusa webhook rejected: missing reference")
             return Response(
                 {"detail": "Missing transaction reference."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -63,12 +75,14 @@ class OneKhusaWebhookView(APIView):
         try:
             amount = Decimal(str(payload["transactionAmount"]))
         except (KeyError, InvalidOperation, ValueError):
+            logger.warning("OneKhusa webhook rejected: invalid amount format")
             return Response(
                 {"detail": "Invalid transaction amount."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if not amount.is_finite() or amount <= 0:
+            logger.warning("OneKhusa webhook rejected: invalid amount value")
             return Response(
                 {"detail": "Invalid transaction amount."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -78,6 +92,7 @@ class OneKhusaWebhookView(APIView):
             "S" if event == "payrequest.success" else "R"
         )
         if payload.get("transactionStatusCode") != expected_code:
+            logger.warning("OneKhusa webhook rejected: unexpected transaction status code")
             return Response(
                 {"detail": "Unexpected transaction status code."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -97,10 +112,11 @@ class OneKhusaWebhookView(APIView):
                 )
 
             if payment.amount != amount:
+                logger.warning("OneKhusa webhook rejected: amount mismatch")
                 return Response(
-                    {"detail": "Transaction amount mismatch."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                        {"error": "Invalid transaction amount"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             if event == "payrequest.success":
                 if payment.status == PaymentTransaction.Status.REVERSED:
